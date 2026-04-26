@@ -5,6 +5,7 @@
 //! accurate even if the timer drifts.
 
 use std::os::windows::process::CommandExt;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -21,6 +22,8 @@ const HELPER_POLL: Duration = Duration::from_secs(10);
 const HELPER_WARMUP: Duration = Duration::from_secs(3);
 const GPU_POLL: Duration = Duration::from_secs(4);
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+include!(concat!(env!("OUT_DIR"), "/sensor_helper_embedded.rs"));
 
 pub struct Stats {
     sys: System,
@@ -250,8 +253,36 @@ fn parse_helper_temp(line: &str) -> Option<f32> {
 fn sensor_helper_path() -> Option<std::path::PathBuf> {
     let exe = std::env::current_exe().ok()?;
     let dir = exe.parent()?;
-    let path = dir.join("tempix-sensors.exe");
-    path.exists().then_some(path)
+    let sidecar = dir.join("tempix-sensors.exe");
+    if sidecar.exists() {
+        return Some(sidecar);
+    }
+
+    extract_embedded_sensor_helper()
+}
+
+fn extract_embedded_sensor_helper() -> Option<PathBuf> {
+    if SENSOR_HELPER_BYTES.is_empty() {
+        return None;
+    }
+
+    let base = std::env::temp_dir().join("Tempix");
+    std::fs::create_dir_all(&base).ok()?;
+    let path = base.join(format!(
+        "tempix-sensors-{}-{}.exe",
+        env!("CARGO_PKG_VERSION"),
+        SENSOR_HELPER_BYTES.len()
+    ));
+
+    let needs_write = std::fs::metadata(&path)
+        .map(|m| m.len() as usize != SENSOR_HELPER_BYTES.len())
+        .unwrap_or(true);
+
+    if needs_write {
+        std::fs::write(&path, SENSOR_HELPER_BYTES).ok()?;
+    }
+
+    Some(path)
 }
 
 struct CpuTempAcpi {

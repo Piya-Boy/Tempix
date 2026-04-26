@@ -1,10 +1,12 @@
 use embed_manifest::{embed_manifest, manifest::ExecutionLevel, new_manifest};
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
     copy_tray_icon();
+    generate_sensor_helper_embed();
 
     if std::env::var_os("CARGO_CFG_WINDOWS").is_some() {
         // DPI-aware, no UAC, no console window.
@@ -20,8 +22,35 @@ fn main() {
     }
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=assets/tempix.ico");
+    println!("cargo:rerun-if-changed=target/release/tempix-sensors.exe");
     println!("cargo:rerun-if-changed=sensor-helper/TempixSensorHelper.csproj");
     println!("cargo:rerun-if-changed=sensor-helper/Program.cs");
+}
+
+fn generate_sensor_helper_embed() {
+    let manifest_dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    let helper_path = manifest_dir
+        .join("target")
+        .join("release")
+        .join("tempix-sensors.exe");
+
+    let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    let embedded_path = out_dir.join("tempix-sensors-embedded.exe");
+    let generated = out_dir.join("sensor_helper_embedded.rs");
+
+    if helper_path.exists() {
+        let _ = fs::copy(&helper_path, &embedded_path);
+        let mut file = fs::File::create(generated).expect("unable to create generated helper module");
+        writeln!(
+            file,
+            "pub static SENSOR_HELPER_BYTES: &[u8] = include_bytes!(r\"{}\");",
+            embedded_path.display()
+        )
+        .expect("unable to write helper bytes module");
+    } else {
+        fs::write(generated, "pub static SENSOR_HELPER_BYTES: &[u8] = &[];\n")
+            .expect("unable to write empty helper bytes module");
+    }
 }
 
 fn copy_tray_icon() {
