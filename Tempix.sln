@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sensor-helper", "sensor-helper", "{A1D5E295-BC24-34B8-C593-D54CF88E0F4A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TempixSensorHelper", "sensor-helper\TempixSensorHelper.csproj", "{4F26DD6A-9F25-D2FC-02D5-DF5757C481F8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F26DD6A-9F25-D2FC-02D5-DF5757C481F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F26DD6A-9F25-D2FC-02D5-DF5757C481F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F26DD6A-9F25-D2FC-02D5-DF5757C481F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F26DD6A-9F25-D2FC-02D5-DF5757C481F8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4F26DD6A-9F25-D2FC-02D5-DF5757C481F8} = {A1D5E295-BC24-34B8-C593-D54CF88E0F4A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {097C093E-5E10-468B-85C4-7B6C383523F5}
+	EndGlobalSection
+EndGlobal

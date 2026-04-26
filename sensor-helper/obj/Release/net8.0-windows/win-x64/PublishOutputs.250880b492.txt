@@ -1,0 +1,2 @@
+D:\Develop\CODING\Tempix\target\release\tempix-sensors.pdb
+D:\Develop\CODING\Tempix\target\release\tempix-sensors.exe

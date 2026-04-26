@@ -1,0 +1,62 @@
+[package]
+name = "tempix"
+version = "0.1.0"
+edition = "2021"
+description = "Ultra-light always-on-top system HUD overlay (Windows)"
+license = "MIT"
+
+# Single binary, no lib, no examples, no tests pulled in.
+autobins = false
+autotests = false
+autoexamples = false
+autobenches = false
+
+[[bin]]
+name = "tempix"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"      # optimize for size
+lto = "fat"          # cross-crate inlining + dead code elim
+codegen-units = 1    # better optimization
+panic = "abort"      # no unwinding tables
+strip = "symbols"    # strip symbols
+overflow-checks = false
+debug = false
+incremental = false
+
+[dependencies]
+# Stat collection. default-features = false drops disks/users/components
+# we don't use, keeping the binary small and runtime cheap.
+sysinfo = { version = "0.32", default-features = false, features = ["system", "network", "component"] }
+
+# NVIDIA GPU stats via NVML. Optional at runtime: we degrade gracefully
+# if the user has no NVIDIA driver installed.
+nvml-wrapper = { version = "0.10", default-features = false }
+
+# Optional CPU temperature fallback through LibreHardwareMonitor/OpenHardwareMonitor WMI.
+serde = { version = "1", features = ["derive"] }
+wmi = { version = "0.18", default-features = false }
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    "Foundation_Numerics",
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_System_LibraryLoader",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+]
+
+[build-dependencies]
+# Embed Windows manifest (DPI awareness + no console) and a default icon.
+embed-manifest = "1.4"
