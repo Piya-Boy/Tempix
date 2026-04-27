@@ -5,7 +5,8 @@
 //!   `UpdateLayeredWindow`. No swap chain, no DXGI present loop.
 //! - One `WM_TIMER` per second; renderer is only invoked when at least
 //!   one displayed value changes.
-//! - Tray icon with Toggle / Quit menu. Optional auto-start.
+//! - Tray icon with Toggle / Quit menu. Auto-start is enabled by default
+//!   on first launch, but can still be turned off from the tray menu.
 
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
@@ -13,8 +14,10 @@ mod render;
 mod stats;
 
 use std::cell::RefCell;
+use std::fs;
 use std::mem::size_of;
 use std::os::windows::process::CommandExt;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use windows::core::*;
@@ -210,6 +213,7 @@ fn main() -> Result<()> {
         // Tray icon.
         install_tray(hwnd);
         migrate_legacy_autostart();
+        ensure_default_autostart();
 
         // Trim startup working set: a lot of one-shot allocations from
         // initialization (Direct2D/DirectWrite/NVML/sysinfo) are no longer
@@ -405,6 +409,7 @@ fn show_tray_menu(hwnd: HWND) {
 const TASK_NAME: &str = "Tempix";
 const LEGACY_RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const LEGACY_RUN_VALUE: &str = "Tempix";
+const AUTOSTART_OPT_OUT_FILE: &str = "autostart.disabled";
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 fn hidden_command(program: &str) -> Command {
@@ -441,6 +446,33 @@ fn is_autostart_enabled() -> bool {
         .args(["/Query", "/TN", TASK_NAME])
         .status()
         .is_ok_and(|status| status.success())
+}
+
+fn app_state_dir() -> Option<PathBuf> {
+    Some(PathBuf::from(std::env::var_os("LOCALAPPDATA")?).join("Tempix"))
+}
+
+fn autostart_opt_out_path() -> Option<PathBuf> {
+    Some(app_state_dir()?.join(AUTOSTART_OPT_OUT_FILE))
+}
+
+fn has_autostart_opt_out() -> bool {
+    autostart_opt_out_path().is_some_and(|path| path.exists())
+}
+
+fn set_autostart_opt_out(disabled: bool) {
+    let Some(path) = autostart_opt_out_path() else {
+        return;
+    };
+
+    if disabled {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(path, b"disabled");
+    } else {
+        let _ = fs::remove_file(path);
+    }
 }
 
 fn create_autostart_task() -> Result<()> {
@@ -482,14 +514,24 @@ fn migrate_legacy_autostart() {
     }
 }
 
+fn ensure_default_autostart() {
+    if has_autostart_opt_out() || is_autostart_enabled() {
+        return;
+    }
+
+    let _ = create_autostart_task();
+}
+
 fn toggle_autostart() -> Result<()> {
     if is_autostart_enabled() {
         run_schtasks(&["/Delete", "/TN", TASK_NAME, "/F"])?;
         delete_legacy_autostart();
+        set_autostart_opt_out(true);
         Ok(())
     } else {
         create_autostart_task()?;
         delete_legacy_autostart();
+        set_autostart_opt_out(false);
         Ok(())
     }
 }

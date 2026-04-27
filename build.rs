@@ -7,6 +7,7 @@ use std::process::Command;
 fn main() {
     copy_tray_icon();
     generate_sensor_helper_embed();
+    embed_exe_icon();
 
     if std::env::var_os("CARGO_CFG_WINDOWS").is_some() {
         // DPI-aware, no UAC, no console window.
@@ -64,6 +65,18 @@ fn copy_tray_icon() {
     let output_dir = manifest_dir.join("target").join(profile);
     let _ = fs::create_dir_all(&output_dir);
     let _ = fs::copy(icon_src, output_dir.join("tempix.ico"));
+}
+
+fn embed_exe_icon() {
+    let manifest_dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    let icon_src = manifest_dir.join("assets").join("tempix.ico");
+    if !icon_src.exists() {
+        return;
+    }
+
+    let mut res = winres::WindowsResource::new();
+    res.set_icon(icon_src.to_string_lossy().as_ref());
+    res.compile().expect("unable to embed exe icon");
 }
 
 fn publish_sensor_helper() {

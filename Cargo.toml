@@ -60,3 +60,4 @@ features = [
 [build-dependencies]
 # Embed Windows manifest (DPI awareness + no console) and a default icon.
 embed-manifest = "1.4"
+winres = "0.1"
