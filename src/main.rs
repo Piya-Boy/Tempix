@@ -35,6 +35,7 @@ use stats::Stats;
 const WM_TRAY: u32 = WM_USER + 1;
 const TIMER_ID: usize = 1;
 const TICK_MS: u32 = 2000;
+const EMBEDDED_TRAY_ICON: &[u8] = include_bytes!("../assets/tempix.ico");
 
 const ID_TOGGLE: usize = 100;
 const ID_AUTOSTART: usize = 101;
@@ -334,8 +335,7 @@ fn install_tray(hwnd: HWND) {
 
 fn load_tray_icon() -> HICON {
     unsafe {
-        if let Ok(exe) = std::env::current_exe() {
-            let icon_path = exe.with_file_name("tempix.ico");
+        if let Some(icon_path) = resolved_tray_icon_path() {
             let icon_path_w: Vec<u16> = icon_path
                 .to_string_lossy()
                 .encode_utf16()
@@ -357,6 +357,27 @@ fn load_tray_icon() -> HICON {
         }
         LoadIconW(None, IDI_APPLICATION).unwrap_or_default()
     }
+}
+
+fn resolved_tray_icon_path() -> Option<PathBuf> {
+    if let Ok(exe) = std::env::current_exe() {
+        let sidecar = exe.with_file_name("tempix.ico");
+        if sidecar.exists() {
+            return Some(sidecar);
+        }
+    }
+
+    let path = app_state_dir()?.join("tempix.ico");
+    let needs_write = fs::metadata(&path)
+        .map(|meta| meta.len() as usize != EMBEDDED_TRAY_ICON.len())
+        .unwrap_or(true);
+    if needs_write {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        fs::write(&path, EMBEDDED_TRAY_ICON).ok()?;
+    }
+    Some(path)
 }
 
 fn remove_tray(hwnd: HWND) {
